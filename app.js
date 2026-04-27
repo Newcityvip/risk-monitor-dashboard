@@ -54,15 +54,16 @@ async function fetchJson(url) {
 }
 
 function normalizeLatest(raw) {
-  const depositRoot = pickRoot(raw, ["deposit", "deposits", "deposit_summary", "depositData"]);
-  const withdrawalRoot = pickRoot(raw, ["withdrawal", "withdrawals", "withdrawal_summary", "withdrawalData"]);
+  if (raw?.brands && typeof raw.brands === "object") {
+    return ALL_BRANDS.map((brand) => {
+      const item = raw.brands[brand] || {};
+      const deposit = toNumber(item.deposit_amount);
+      const withdrawal = toNumber(item.withdrawal_amount);
+      return buildBrandRow(brand, deposit, withdrawal);
+    });
+  }
 
-  return ALL_BRANDS.map((brand) => {
-    const depositValue = getBrandAmount(depositRoot, brand, ["deposit", "amount", "total", "value"]);
-    const withdrawalValue = getBrandAmount(withdrawalRoot, brand, ["withdrawal", "amount", "total", "value"]);
-
-    return buildBrandRow(brand, depositValue, withdrawalValue);
-  });
+  return ALL_BRANDS.map((brand) => buildBrandRow(brand, 0, 0));
 }
 
 function pickRoot(raw, keys) {
