@@ -344,17 +344,26 @@ function normalizeHistory(raw) {
 }
 
 function getHistoryLabel(item, index) {
-  const rawDate = item.timestamp || item.updated_at || item.created_at || item.time || item.date;
+  const rawDate =
+    item.updated_at_utc ||
+    item.timestamp ||
+    item.updated_at ||
+    item.created_at ||
+    item.time ||
+    item.date;
+
   if (!rawDate) return `Point ${index + 1}`;
 
   const date = new Date(rawDate);
   if (Number.isNaN(date.getTime())) return String(rawDate);
 
   return date.toLocaleString("en-GB", {
+    timeZone: "Asia/Singapore",
     month: "short",
     day: "2-digit",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
+    hour12: true
   });
 }
 
@@ -409,17 +418,27 @@ function destroyChart(key) {
 }
 
 function getLastUpdatedText(raw) {
-  const value = raw?.timestamp || raw?.updated_at || raw?.last_updated || raw?.generated_at;
-  if (!value) return "Latest file loaded";
+  const value =
+    raw?.updated_at_utc ||
+    raw?.timestamp ||
+    raw?.updated_at ||
+    raw?.last_updated ||
+    raw?.generated_at;
+
+  if (!value) return "Not available";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
+
   return date.toLocaleString("en-GB", {
+    timeZone: "Asia/Singapore",
     year: "numeric",
     month: "short",
     day: "2-digit",
     hour: "2-digit",
-    minute: "2-digit"
-  });
+    minute: "2-digit",
+    hour12: true
+  }) + " (GMT+8)";
 }
 
 function setText(id, value) {
