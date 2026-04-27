@@ -9,6 +9,7 @@ let state = {
   rows: [],
   latest: null,
   history: [],
+  hourlySelectedBrands: [...ALL_BRANDS],
   charts: {}
 };
 
@@ -18,6 +19,12 @@ document.addEventListener("DOMContentLoaded", () => {
   $("refreshBtn").addEventListener("click", loadDashboard);
   $("brandSearch").addEventListener("input", renderTable);
   $("groupFilter").addEventListener("change", renderTable);
+
+  if ($("hourlyDateFilter")) $("hourlyDateFilter").addEventListener("change", renderHourlySection);
+  if ($("hourlyMetricFilter")) $("hourlyMetricFilter").addEventListener("change", renderHourlySection);
+  if ($("selectAllHourlyBrands")) $("selectAllHourlyBrands").addEventListener("click", () => setHourlyBrands([...ALL_BRANDS]));
+  if ($("clearHourlyBrands")) $("clearHourlyBrands").addEventListener("click", () => setHourlyBrands([]));
+
   loadDashboard();
 });
 
@@ -30,7 +37,7 @@ async function loadDashboard() {
     ]);
 
     if (latestResult.status !== "fulfilled") {
-      throw new Error("Could not load data/latest.json");
+      throw new Error("Could not load live Worker data");
     }
 
     state.latest = latestResult.value;
@@ -41,7 +48,7 @@ async function loadDashboard() {
     showToast("Dashboard updated");
   } catch (error) {
     console.error(error);
-    $("brandTableBody").innerHTML = `<tr><td colspan="7" class="empty error">Failed to load dashboard data. Check data/latest.json path.</td></tr>`;
+    $("brandTableBody").innerHTML = `<tr><td colspan="7" class="empty error">Failed to load dashboard data. Check Worker URL or data/latest.json path.</td></tr>`;
     $("lastUpdated").textContent = "Load failed";
     showToast("Data load failed");
   }
@@ -179,6 +186,8 @@ function renderDashboard() {
   renderGroupChart(mcw, cx);
   renderBrandNetChart();
   renderTrendChart();
+  renderHourlyControls();
+  renderHourlySection();
   renderAlertPreview(total);
 }
 
@@ -329,6 +338,190 @@ function renderTrendChart() {
   });
 }
 
+function renderHourlyControls() {
+  if (!$("hourlyDateFilter") || !$("hourlyBrandPicker")) return;
+
+  const dates = getHourlyDates();
+  const dateSelect = $("hourlyDateFilter");
+  const currentDate = dateSelect.value;
+
+  dateSelect.innerHTML = dates.map((date) => `<option value="${date}">${date}</option>`).join("");
+
+  if (dates.includes(currentDate)) {
+    dateSelect.value = currentDate;
+  } else if (dates.length) {
+    dateSelect.value = dates[dates.length - 1];
+  }
+
+  $("hourlyBrandPicker").innerHTML = ALL_BRANDS.map((brand) => {
+    const group = MCW_BRANDS.includes(brand) ? "mcw" : "cx";
+    const checked = state.hourlySelectedBrands.includes(brand) ? "checked" : "";
+    return `
+      <label class="brand-check ${group}">
+        <input type="checkbox" value="${brand}" ${checked} />
+        <span>${brand}</span>
+      </label>
+    `;
+  }).join("");
+
+  $("hourlyBrandPicker").querySelectorAll("input[type='checkbox']").forEach((box) => {
+    box.addEventListener("change", () => {
+      state.hourlySelectedBrands = Array.from($("hourlyBrandPicker").querySelectorAll("input[type='checkbox']:checked"))
+        .map((input) => input.value);
+      renderHourlySection();
+    });
+  });
+}
+
+function setHourlyBrands(brands) {
+  state.hourlySelectedBrands = brands;
+  if ($("hourlyBrandPicker")) {
+    $("hourlyBrandPicker").querySelectorAll("input[type='checkbox']").forEach((box) => {
+      box.checked = brands.includes(box.value);
+    });
+  }
+  renderHourlySection();
+}
+
+function getHourlyDates() {
+  const dates = new Set();
+  const deposit = state.latest?.hourly?.deposit || {};
+  const withdrawal = state.latest?.hourly?.withdrawal || {};
+
+  for (const source of [deposit, withdrawal]) {
+    for (const brand of ALL_BRANDS) {
+      Object.keys(source?.[brand] || {}).forEach((date) => dates.add(date));
+    }
+  }
+
+  return Array.from(dates).sort();
+}
+
+function renderHourlySection() {
+  if (!$("hourlyTableBody")) return;
+
+  const selectedDate = $("hourlyDateFilter")?.value || getHourlyDates().slice(-1)[0];
+  const selectedBrands = state.hourlySelectedBrands.length ? state.hourlySelectedBrands : [];
+  const metric = $("hourlyMetricFilter")?.value || "difference";
+  const hourlyRows = buildHourlyRows(selectedDate, selectedBrands);
+
+  updateHourlySummary(selectedBrands, selectedDate, metric);
+  renderHourlyTable(hourlyRows);
+  renderHourlyTrendChart(hourlyRows, metric);
+  renderHourlyNetChart(hourlyRows);
+}
+
+function buildHourlyRows(date, selectedBrands) {
+  if (!date || !selectedBrands.length) return [];
+
+  const hours = new Set();
+  const deposit = state.latest?.hourly?.deposit || {};
+  const withdrawal = state.latest?.hourly?.withdrawal || {};
+
+  for (const brand of selectedBrands) {
+    Object.keys(deposit?.[brand]?.[date] || {}).forEach((hour) => hours.add(hour));
+    Object.keys(withdrawal?.[brand]?.[date] || {}).forEach((hour) => hours.add(hour));
+  }
+
+  return Array.from(hours).sort().map((hour) => {
+    let depositAmount = 0;
+    let depositDifference = 0;
+    let withdrawalAmount = 0;
+    let withdrawalDifference = 0;
+
+    for (const brand of selectedBrands) {
+      const dep = deposit?.[brand]?.[date]?.[hour] || {};
+      const wd = withdrawal?.[brand]?.[date]?.[hour] || {};
+
+      depositAmount += toNumber(dep.amount);
+      depositDifference += toNumber(dep.difference);
+      withdrawalAmount += toNumber(wd.amount);
+      withdrawalDifference += toNumber(wd.difference);
+    }
+
+    return {
+      hour,
+      depositAmount,
+      depositDifference,
+      withdrawalAmount,
+      withdrawalDifference,
+      net: depositAmount - withdrawalAmount,
+      netDifference: depositDifference - withdrawalDifference
+    };
+  });
+}
+
+function updateHourlySummary(selectedBrands, selectedDate, metric) {
+  if ($("hourlySelectionSummary")) {
+    const countText = selectedBrands.length === ALL_BRANDS.length
+      ? "All brands selected"
+      : `${selectedBrands.length} brand(s) selected`;
+    $("hourlySelectionSummary").textContent = `${countText}${selectedDate ? ` • ${selectedDate}` : ""}`;
+  }
+
+  if ($("hourlyChartSubtitle")) {
+    $("hourlyChartSubtitle").textContent = metric === "amount"
+      ? "Amount by selected brands"
+      : "Difference by selected brands";
+  }
+}
+
+function renderHourlyTable(rows) {
+  if (!rows.length) {
+    $("hourlyTableBody").innerHTML = `<tr><td colspan="6" class="empty">No hourly data for selected date / brands.</td></tr>`;
+    return;
+  }
+
+  $("hourlyTableBody").innerHTML = rows.map((row) => `
+    <tr>
+      <td><strong>${row.hour}</strong></td>
+      <td class="num">${money(row.depositAmount)}</td>
+      <td class="num ${row.depositDifference < 0 ? "neg" : "pos"}">${money(row.depositDifference)}</td>
+      <td class="num">${money(row.withdrawalAmount)}</td>
+      <td class="num ${row.withdrawalDifference < 0 ? "neg" : "pos"}">${money(row.withdrawalDifference)}</td>
+      <td class="num ${row.net < 0 ? "neg" : "pos"}">${money(row.net)}</td>
+    </tr>
+  `).join("");
+}
+
+function renderHourlyTrendChart(rows, metric) {
+  const ctx = $("hourlyTrendChart");
+  if (!ctx) return;
+  destroyChart("hourlyTrendChart");
+
+  const labels = rows.map((row) => row.hour);
+  const depositData = rows.map((row) => metric === "amount" ? row.depositAmount : row.depositDifference);
+  const withdrawalData = rows.map((row) => metric === "amount" ? row.withdrawalAmount : row.withdrawalDifference);
+  const metricLabel = metric === "amount" ? "Amount" : "Difference";
+
+  state.charts.hourlyTrendChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: `Deposit ${metricLabel}`, data: depositData, tension: 0.35 },
+        { label: `Withdrawal ${metricLabel}`, data: withdrawalData, tension: 0.35 }
+      ]
+    },
+    options: chartOptions()
+  });
+}
+
+function renderHourlyNetChart(rows) {
+  const ctx = $("hourlyNetChart");
+  if (!ctx) return;
+  destroyChart("hourlyNetChart");
+
+  state.charts.hourlyNetChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: rows.map((row) => row.hour),
+      datasets: [{ label: "Net Flow", data: rows.map((row) => row.net) }]
+    },
+    options: chartOptions()
+  });
+}
+
 function normalizeHistory(raw) {
   const list = Array.isArray(raw) ? raw : Array.isArray(raw?.history) ? raw.history : [];
   return list.map((item, index) => {
@@ -448,24 +641,26 @@ function setText(id, value) {
 
 function money(value) {
   const sign = value < 0 ? "-" : "";
-  const abs = Math.abs(value);
+  const abs = Math.abs(toNumber(value));
   return `${sign}${abs.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 function shortMoney(value) {
-  const abs = Math.abs(value);
+  const abs = Math.abs(toNumber(value));
   if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return String(value);
 }
 
 function percent(value) {
-  return `${(value * 100).toFixed(1)}%`;
+  const safe = Number.isFinite(value) ? value : 0;
+  return `${(safe * 100).toFixed(1)}%`;
 }
 
 let toastTimer = null;
 function showToast(message) {
   const toast = $("toast");
+  if (!toast) return;
   toast.textContent = message;
   toast.classList.add("show");
   clearTimeout(toastTimer);
