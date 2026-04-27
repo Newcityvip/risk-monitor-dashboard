@@ -232,18 +232,21 @@
         <canvas id="trendChart"></canvas>
       </section>
 
-
       <section class="panel hourly-panel" id="hourly">
         <div class="panel-head hourly-head">
           <div>
             <p class="eyebrow">Live Hourly Analysis</p>
-            <h3>Hourly Deposit / Withdrawal Trend</h3>
-            <p class="muted">Select a date and brands to review hourly brand-wise amount, difference, and net flow.</p>
+            <h3>Exact Hour Brand-wise View</h3>
+            <p class="muted">Select the exact source date/hour to compare deposit, withdrawal, difference, and net flow by brand.</p>
           </div>
           <div class="hourly-controls">
             <div class="control-field">
               <label for="hourlyDateFilter">Date</label>
               <select id="hourlyDateFilter"></select>
+            </div>
+            <div class="control-field">
+              <label for="hourlyHourFilter">Source Hour</label>
+              <select id="hourlyHourFilter"></select>
             </div>
             <div class="control-field">
               <label for="hourlyMetricFilter">Chart Metric</label>
@@ -252,6 +255,34 @@
                 <option value="amount">Amount</option>
               </select>
             </div>
+          </div>
+        </div>
+
+        <div class="hourly-source-note">
+          <strong id="hourlyExactLabel">Showing exact source hour</strong>
+          <span>Times are read directly from deposit and withdrawal source data.</span>
+        </div>
+
+        <div class="status-strip hourly-exact-summary">
+          <div class="status-card">
+            <span>Selected Hour Deposit</span>
+            <strong id="hourlyExactDeposit">--</strong>
+            <small>Selected brands only</small>
+          </div>
+          <div class="status-card">
+            <span>Selected Hour Withdrawal</span>
+            <strong id="hourlyExactWithdrawal">--</strong>
+            <small>Selected brands only</small>
+          </div>
+          <div class="status-card">
+            <span>Selected Hour Net Flow</span>
+            <strong id="hourlyExactNet">--</strong>
+            <small>Deposit - Withdrawal</small>
+          </div>
+          <div class="status-card">
+            <span>Selected Hour Pressure</span>
+            <strong id="hourlyExactPressure">--</strong>
+            <small>Withdrawal / Deposit</small>
           </div>
         </div>
 
@@ -267,28 +298,36 @@
         </div>
         <div id="hourlyBrandPicker" class="brand-picker"></div>
 
-        <div class="grid two-col hourly-chart-grid">
+        <div class="grid three-col hourly-chart-grid">
           <article class="mini-chart-card">
             <div class="mini-chart-title">
-              <span>Selected Brands Hourly Total</span>
-              <small id="hourlyChartSubtitle">Difference total by selected brands</small>
+              <span id="hourlyDepositChartTitle">Deposit Difference by Brand</span>
+              <small id="hourlyDepositChartSubtitle">Exact hour</small>
             </div>
-            <canvas id="hourlyTrendChart"></canvas>
+            <canvas id="hourlyDepositBrandChart"></canvas>
           </article>
 
           <article class="mini-chart-card">
             <div class="mini-chart-title">
-              <span>Selected Brands Net Flow</span>
-              <small>Total deposit - total withdrawal</small>
+              <span id="hourlyWithdrawalChartTitle">Withdrawal Difference by Brand</span>
+              <small id="hourlyWithdrawalChartSubtitle">Exact hour</small>
             </div>
-            <canvas id="hourlyNetChart"></canvas>
+            <canvas id="hourlyWithdrawalBrandChart"></canvas>
+          </article>
+
+          <article class="mini-chart-card">
+            <div class="mini-chart-title">
+              <span>Net Flow by Brand</span>
+              <small>Deposit - Withdrawal</small>
+            </div>
+            <canvas id="hourlyNetBrandChart"></canvas>
           </article>
         </div>
 
         <div class="hourly-table-title">
           <div>
-            <strong>Brand-wise Hourly Details</strong>
-            <small>Each selected brand is shown separately by hour.</small>
+            <h3>Brand-wise Exact Hour Details</h3>
+            <small>Each selected brand is shown separately for the selected source hour.</small>
           </div>
         </div>
 
