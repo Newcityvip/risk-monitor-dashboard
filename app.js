@@ -428,7 +428,12 @@ function getHourlyDates() {
 
 function hasHourlyValue(values) {
   if (!values || typeof values !== "object") return false;
-  return toNumber(values.amount) !== 0 || toNumber(values.difference) !== 0 || toNumber(values.count) !== 0;
+
+  // IMPORTANT:
+  // Only treat an hour as valid when the source has real amount/count data.
+  // Some source tables include future/empty hours with negative difference only;
+  // those should NOT be selectable because deposit/withdrawal amount is 0.
+  return toNumber(values.amount) !== 0 || toNumber(values.count) !== 0;
 }
 
 function compareHour(a, b) {
@@ -467,7 +472,7 @@ function renderHourlySection() {
   const hours = getHourlyHours(selectedDate);
   const selectedHour = $("hourlyHourFilter")?.value || (hours.length ? hours[hours.length - 1] : null);
   const selectedBrands = state.hourlySelectedBrands.length ? state.hourlySelectedBrands : [];
-  const metric = $("hourlyMetricFilter")?.value || "difference";
+  const metric = $("hourlyMetricFilter")?.value || "amount";
   const brandRows = buildExactHourBrandRows(selectedDate, selectedHour, selectedBrands);
 
   updateHourlySummary(selectedBrands, selectedDate, selectedHour, metric, brandRows);
