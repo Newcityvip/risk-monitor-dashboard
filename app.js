@@ -1,283 +1,453 @@
 const MCW_BRANDS = ["M1", "B1", "K1", "M2", "B2", "B4", "B3", "TK", "B5", "JY"];
 const CX_BRANDS = ["CX", "MB", "MP", "JBG", "DZP", "SB", "SLB", "JWAY", "BJD", "KVP", "HBJ"];
+const ALL_BRANDS = [...MCW_BRANDS, ...CX_BRANDS];
 
-let latestData = {};
-let historyData = [];
+const DATA_URL = "data/latest.json";
+const HISTORY_URL = "data/history.json";
+
+let state = {
+  rows: [],
+  latest: null,
+  history: [],
+  charts: {}
+};
 
 const $ = (id) => document.getElementById(id);
 
-function num(value) {
-  if (value === null || value === undefined) return 0;
-  if (typeof value === "number") return value;
-  return Number(String(value).replace(/[^\d.-]/g, "")) || 0;
-}
+document.addEventListener("DOMContentLoaded", () => {
+  $("refreshBtn").addEventListener("click", loadDashboard);
+  $("brandSearch").addEventListener("input", renderTable);
+  $("groupFilter").addEventListener("change", renderTable);
+  loadDashboard();
+});
 
-function fmt(value) {
-  return num(value).toLocaleString("en-US", { maximumFractionDigits: 0 });
-}
+async function loadDashboard() {
+  showToast("Refreshing data...");
+  try {
+    const [latestResult, historyResult] = await Promise.allSettled([
+      fetchJson(DATA_URL),
+      fetchJson(HISTORY_URL)
+    ]);
 
-function pct(value) {
-  return `${num(value).toFixed(1)}%`;
-}
-
-function getUpdatedTime(data) {
-  return data.updated_at || data.last_updated || data.timestamp || data.time || "";
-}
-
-function normalizeRows(raw, type) {
-  if (!raw) return [];
-
-  if (Array.isArray(raw)) return raw;
-
-  if (Array.isArray(raw[type])) return raw[type];
-  if (Array.isArray(raw[`${type}s`])) return raw[`${type}s`];
-
-  if (raw.data && Array.isArray(raw.data[type])) return raw.data[type];
-  if (raw.data && Array.isArray(raw.data[`${type}s`])) return raw.data[`${type}s`];
-
-  if (raw.summary && Array.isArray(raw.summary[type])) return raw.summary[type];
-  if (raw.summary && Array.isArray(raw.summary[`${type}s`])) return raw.summary[`${type}s`];
-
-  return [];
-}
-
-function getBrand(row) {
-  return String(
-    row.brand ||
-    row.Brand ||
-    row.brand_code ||
-    row.code ||
-    row.name ||
-    ""
-  ).trim().toUpperCase();
-}
-
-function getAmount(row) {
-  return num(
-    row.amount ||
-    row.total ||
-    row.value ||
-    row.total_amount ||
-    row.deposit ||
-    row.withdrawal ||
-    row.count_amount ||
-    0
-  );
-}
-
-function buildBrandMap(data) {
-  const depositRows = normalizeRows(data, "deposit");
-  const withdrawalRows = normalizeRows(data, "withdrawal");
-
-  const map = {};
-
-  [...MCW_BRANDS, ...CX_BRANDS].forEach((brand) => {
-    map[brand] = {
-      brand,
-      group: MCW_BRANDS.includes(brand) ? "MCW" : "CX",
-      deposit: 0,
-      withdrawal: 0
-    };
-  });
-
-  depositRows.forEach((row) => {
-    const brand = getBrand(row);
-    if (!brand) return;
-    if (!map[brand]) {
-      map[brand] = { brand, group: "Other", deposit: 0, withdrawal: 0 };
-    }
-    map[brand].deposit += getAmount(row);
-  });
-
-  withdrawalRows.forEach((row) => {
-    const brand = getBrand(row);
-    if (!brand) return;
-    if (!map[brand]) {
-      map[brand] = { brand, group: "Other", deposit: 0, withdrawal: 0 };
-    }
-    map[brand].withdrawal += getAmount(row);
-  });
-
-  return map;
-}
-
-function totalByGroup(map, brands, field) {
-  return brands.reduce((sum, brand) => sum + num(map[brand]?.[field]), 0);
-}
-
-function riskStatus(row) {
-  const pressure = row.deposit > 0 ? (row.withdrawal / row.deposit) * 100 : row.withdrawal > 0 ? 999 : 0;
-  const net = row.deposit - row.withdrawal;
-
-  if (pressure >= 120 || net < -500000) return { label: "High Risk", cls: "badge-red" };
-  if (pressure >= 90 || net < 0) return { label: "Watch", cls: "badge-yellow" };
-  return { label: "Normal", cls: "badge-green" };
-}
-
-function renderSummary(map) {
-  const mcwDeposit = totalByGroup(map, MCW_BRANDS, "deposit");
-  const mcwWithdrawal = totalByGroup(map, MCW_BRANDS, "withdrawal");
-  const cxDeposit = totalByGroup(map, CX_BRANDS, "deposit");
-  const cxWithdrawal = totalByGroup(map, CX_BRANDS, "withdrawal");
-
-  const totalDeposit = mcwDeposit + cxDeposit;
-  const totalWithdrawal = mcwWithdrawal + cxWithdrawal;
-  const net = totalDeposit - totalWithdrawal;
-  const pressure = totalDeposit > 0 ? (totalWithdrawal / totalDeposit) * 100 : 0;
-
-  $("mcwDeposit").textContent = fmt(mcwDeposit);
-  $("mcwWithdrawal").textContent = fmt(mcwWithdrawal);
-  $("cxDeposit").textContent = fmt(cxDeposit);
-  $("cxWithdrawal").textContent = fmt(cxWithdrawal);
-  $("netFlow").textContent = fmt(net);
-  $("withdrawalPressure").textContent = pct(pressure);
-
-  $("m1Deposit").textContent = fmt(map.M1?.deposit);
-  $("m1Withdrawal").textContent = fmt(map.M1?.withdrawal);
-  $("cxOnlyDeposit").textContent = fmt(map.CX?.deposit);
-  $("cxOnlyWithdrawal").textContent = fmt(map.CX?.withdrawal);
-}
-
-function renderTable(map) {
-  const keyword = $("searchInput").value.trim().toUpperCase();
-
-  const rows = Object.values(map)
-    .filter((row) => !keyword || row.brand.includes(keyword) || row.group.includes(keyword))
-    .sort((a, b) => (b.deposit + b.withdrawal) - (a.deposit + a.withdrawal));
-
-  $("brandTable").innerHTML = rows.map((row) => {
-    const net = row.deposit - row.withdrawal;
-    const pressure = row.deposit > 0 ? (row.withdrawal / row.deposit) * 100 : row.withdrawal > 0 ? 999 : 0;
-    const status = riskStatus(row);
-
-    return `
-      <tr>
-        <td><strong>${row.brand}</strong></td>
-        <td>${row.group}</td>
-        <td>${fmt(row.deposit)}</td>
-        <td>${fmt(row.withdrawal)}</td>
-        <td class="${net < 0 ? "negative" : "positive"}">${fmt(net)}</td>
-        <td>${pct(pressure)}</td>
-        <td><span class="badge ${status.cls}">${status.label}</span></td>
-      </tr>
-    `;
-  }).join("");
-}
-
-function renderAlerts(map) {
-  const alerts = [];
-
-  Object.values(map).forEach((row) => {
-    const pressure = row.deposit > 0 ? (row.withdrawal / row.deposit) * 100 : row.withdrawal > 0 ? 999 : 0;
-    const net = row.deposit - row.withdrawal;
-
-    if (pressure >= 120) {
-      alerts.push(`${row.brand}: Withdrawal pressure very high (${pct(pressure)})`);
-    } else if (pressure >= 90) {
-      alerts.push(`${row.brand}: Withdrawal pressure needs monitoring (${pct(pressure)})`);
+    if (latestResult.status !== "fulfilled") {
+      throw new Error("Could not load data/latest.json");
     }
 
-    if (net < 0) {
-      alerts.push(`${row.brand}: Negative net flow (${fmt(net)})`);
-    }
+    state.latest = latestResult.value;
+    state.history = historyResult.status === "fulfilled" ? normalizeHistory(historyResult.value) : [];
+    state.rows = normalizeLatest(state.latest);
+
+    renderDashboard();
+    showToast("Dashboard updated");
+  } catch (error) {
+    console.error(error);
+    $("brandTableBody").innerHTML = `<tr><td colspan="7" class="empty error">Failed to load dashboard data. Check data/latest.json path.</td></tr>`;
+    $("lastUpdated").textContent = "Load failed";
+    showToast("Data load failed");
+  }
+}
+
+async function fetchJson(url) {
+  const response = await fetch(`${url}?v=${Date.now()}`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+  return response.json();
+}
+
+function normalizeLatest(raw) {
+  const depositRoot = pickRoot(raw, ["deposit", "deposits", "deposit_summary", "depositData"]);
+  const withdrawalRoot = pickRoot(raw, ["withdrawal", "withdrawals", "withdrawal_summary", "withdrawalData"]);
+
+  return ALL_BRANDS.map((brand) => {
+    const depositValue = getBrandAmount(depositRoot, brand, ["deposit", "amount", "total", "value"]);
+    const withdrawalValue = getBrandAmount(withdrawalRoot, brand, ["withdrawal", "amount", "total", "value"]);
+
+    return buildBrandRow(brand, depositValue, withdrawalValue);
+  });
+}
+
+function pickRoot(raw, keys) {
+  if (!raw || typeof raw !== "object") return {};
+  for (const key of keys) {
+    if (raw[key] !== undefined) return raw[key];
+  }
+  return raw;
+}
+
+function getBrandAmount(root, brand, valueKeys) {
+  if (!root) return 0;
+
+  if (Array.isArray(root)) {
+    const found = root.find((item) => {
+      const code = String(item.brand || item.Brand || item.code || item.name || item.Name || "").trim().toUpperCase();
+      return code === brand;
+    });
+    return found ? extractNumber(found, valueKeys) : 0;
+  }
+
+  if (typeof root === "object") {
+    const direct = root[brand] ?? root[brand.toLowerCase()] ?? root[brand.toUpperCase()];
+    if (typeof direct === "number" || typeof direct === "string") return toNumber(direct);
+    if (direct && typeof direct === "object") return extractNumber(direct, valueKeys);
+
+    const values = Object.values(root);
+    const arrayLikeMatch = values.find((item) => {
+      if (!item || typeof item !== "object") return false;
+      const code = String(item.brand || item.Brand || item.code || item.name || item.Name || "").trim().toUpperCase();
+      return code === brand;
+    });
+    return arrayLikeMatch ? extractNumber(arrayLikeMatch, valueKeys) : 0;
+  }
+
+  return 0;
+}
+
+function extractNumber(obj, preferredKeys) {
+  for (const key of preferredKeys) {
+    if (obj[key] !== undefined) return toNumber(obj[key]);
+    const upperKey = key.toUpperCase();
+    const titleKey = key.charAt(0).toUpperCase() + key.slice(1);
+    if (obj[upperKey] !== undefined) return toNumber(obj[upperKey]);
+    if (obj[titleKey] !== undefined) return toNumber(obj[titleKey]);
+  }
+
+  const numericCandidate = Object.values(obj).find((value) => {
+    if (typeof value === "number") return true;
+    if (typeof value === "string") return /[\d,.]+/.test(value);
+    return false;
   });
 
-  if (!alerts.length) {
-    $("alerts").innerHTML = `<div class="alert good">No major risk detected right now.</div>`;
+  return toNumber(numericCandidate);
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined || value === "") return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value).replace(/[^\d.-]/g, "");
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildBrandRow(brand, deposit, withdrawal) {
+  const net = deposit - withdrawal;
+  const pressure = deposit > 0 ? withdrawal / deposit : withdrawal > 0 ? 9.99 : 0;
+  const group = MCW_BRANDS.includes(brand) ? "MCW" : "CX";
+
+  return {
+    brand,
+    group,
+    deposit,
+    withdrawal,
+    net,
+    pressure,
+    risk: getRiskLevel(pressure, net)
+  };
+}
+
+function getRiskLevel(pressure, net) {
+  if (pressure >= 1.1 || net < 0) return "High";
+  if (pressure >= 0.8) return "Watch";
+  return "Normal";
+}
+
+function renderDashboard() {
+  const total = sumRows(state.rows);
+  const mcw = sumRows(state.rows.filter((r) => r.group === "MCW"));
+  const cx = sumRows(state.rows.filter((r) => r.group === "CX"));
+  const m1 = state.rows.find((r) => r.brand === "M1") || buildBrandRow("M1", 0, 0);
+  const cxBrand = state.rows.find((r) => r.brand === "CX") || buildBrandRow("CX", 0, 0);
+
+  $("lastUpdated").textContent = getLastUpdatedText(state.latest);
+  setText("totalDeposit", money(total.deposit));
+  setText("totalWithdrawal", money(total.withdrawal));
+  setText("netFlow", money(total.net));
+  setText("withdrawalPressure", percent(total.pressure));
+
+  setText("mcwDeposit", money(mcw.deposit));
+  setText("mcwWithdrawal", money(mcw.withdrawal));
+  setText("mcwNet", money(mcw.net));
+  setText("mcwPressure", percent(mcw.pressure));
+
+  setText("cxGroupDeposit", money(cx.deposit));
+  setText("cxGroupWithdrawal", money(cx.withdrawal));
+  setText("cxGroupNet", money(cx.net));
+  setText("cxGroupPressure", percent(cx.pressure));
+
+  renderDirectComparison(m1, cxBrand);
+  renderRiskList();
+  renderTable();
+  renderGroupChart(mcw, cx);
+  renderBrandNetChart();
+  renderTrendChart();
+  renderAlertPreview(total);
+}
+
+function sumRows(rows) {
+  const deposit = rows.reduce((sum, r) => sum + r.deposit, 0);
+  const withdrawal = rows.reduce((sum, r) => sum + r.withdrawal, 0);
+  const net = deposit - withdrawal;
+  const pressure = deposit > 0 ? withdrawal / deposit : 0;
+  return { deposit, withdrawal, net, pressure };
+}
+
+function renderDirectComparison(m1, cxBrand) {
+  setText("m1Deposit", money(m1.deposit));
+  setText("m1Withdrawal", money(m1.withdrawal));
+  setText("m1Net", money(m1.net));
+  setText("m1Pressure", percent(m1.pressure));
+
+  setText("cxDeposit", money(cxBrand.deposit));
+  setText("cxWithdrawal", money(cxBrand.withdrawal));
+  setText("cxNet", money(cxBrand.net));
+  setText("cxPressure", percent(cxBrand.pressure));
+
+  const winner = $("m1CxWinner");
+  if (m1.net > cxBrand.net) {
+    winner.textContent = "M1 stronger net";
+    winner.className = "pill good";
+  } else if (cxBrand.net > m1.net) {
+    winner.textContent = "CX stronger net";
+    winner.className = "pill good";
+  } else {
+    winner.textContent = "Equal net";
+    winner.className = "pill neutral";
+  }
+}
+
+function renderRiskList() {
+  const topRisk = [...state.rows]
+    .sort((a, b) => b.pressure - a.pressure || a.net - b.net)
+    .slice(0, 5);
+
+  const highCount = state.rows.filter((r) => r.risk === "High").length;
+  const riskLevel = $("riskLevel");
+
+  if (highCount > 0) {
+    riskLevel.textContent = `${highCount} High Risk`;
+    riskLevel.className = "pill danger";
+  } else {
+    riskLevel.textContent = "Normal";
+    riskLevel.className = "pill good";
+  }
+
+  $("riskList").innerHTML = topRisk.map((r) => `
+    <div class="risk-row">
+      <div>
+        <strong>${r.brand}</strong>
+        <span>${r.group} • Net ${money(r.net)}</span>
+      </div>
+      <div class="risk-right">
+        <strong>${percent(r.pressure)}</strong>
+        <span class="risk-tag ${r.risk.toLowerCase()}">${r.risk}</span>
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderTable() {
+  const search = $("brandSearch").value.trim().toUpperCase();
+  const group = $("groupFilter").value;
+
+  const rows = state.rows.filter((r) => {
+    const matchSearch = !search || r.brand.includes(search);
+    const matchGroup = group === "all" || r.group === group;
+    return matchSearch && matchGroup;
+  });
+
+  if (!rows.length) {
+    $("brandTableBody").innerHTML = `<tr><td colspan="7" class="empty">No brand found.</td></tr>`;
     return;
   }
 
-  $("alerts").innerHTML = alerts.slice(0, 8).map((x) => `<div class="alert">${x}</div>`).join("");
+  $("brandTableBody").innerHTML = rows
+    .sort((a, b) => b.deposit - a.deposit)
+    .map((r) => `
+      <tr>
+        <td><strong>${r.brand}</strong></td>
+        <td><span class="group-badge ${r.group.toLowerCase()}">${r.group}</span></td>
+        <td class="num">${money(r.deposit)}</td>
+        <td class="num">${money(r.withdrawal)}</td>
+        <td class="num ${r.net < 0 ? "neg" : "pos"}">${money(r.net)}</td>
+        <td class="num">${percent(r.pressure)}</td>
+        <td><span class="risk-tag ${r.risk.toLowerCase()}">${r.risk}</span></td>
+      </tr>
+    `).join("");
+}
+
+function renderGroupChart(mcw, cx) {
+  const ctx = $("groupChart");
+  destroyChart("groupChart");
+
+  state.charts.groupChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["MCW", "CX"],
+      datasets: [
+        { label: "Deposit", data: [mcw.deposit, cx.deposit] },
+        { label: "Withdrawal", data: [mcw.withdrawal, cx.withdrawal] }
+      ]
+    },
+    options: chartOptions()
+  });
+}
+
+function renderBrandNetChart() {
+  const ctx = $("brandNetChart");
+  destroyChart("brandNetChart");
+
+  const rows = [...state.rows].sort((a, b) => Math.abs(b.net) - Math.abs(a.net)).slice(0, 10);
+
+  state.charts.brandNetChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: rows.map((r) => r.brand),
+      datasets: [{ label: "Net Flow", data: rows.map((r) => r.net) }]
+    },
+    options: chartOptions()
+  });
+}
+
+function renderTrendChart() {
+  const ctx = $("trendChart");
+  destroyChart("trendChart");
+
+  const points = state.history.slice(-168);
+  const labels = points.map((p) => p.label);
+  const deposits = points.map((p) => p.deposit);
+  const withdrawals = points.map((p) => p.withdrawal);
+
+  state.charts.trendChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "Deposit", data: deposits, tension: 0.35 },
+        { label: "Withdrawal", data: withdrawals, tension: 0.35 }
+      ]
+    },
+    options: chartOptions()
+  });
 }
 
 function normalizeHistory(raw) {
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw.history)) return raw.history;
-  if (Array.isArray(raw.data)) return raw.data;
-  return [];
-}
-
-function pointValue(item, type) {
-  const map = buildBrandMap(item);
-  const deposit = totalByGroup(map, [...MCW_BRANDS, ...CX_BRANDS], "deposit");
-  const withdrawal = totalByGroup(map, [...MCW_BRANDS, ...CX_BRANDS], "withdrawal");
-
-  if (type === "withdrawal") return withdrawal;
-  if (type === "net") return deposit - withdrawal;
-  return deposit;
-}
-
-function renderTrend() {
-  const canvas = $("trendCanvas");
-  const ctx = canvas.getContext("2d");
-  const type = $("trendType").value;
-
-  const parentWidth = canvas.parentElement.clientWidth - 40;
-  canvas.width = Math.max(parentWidth, 320);
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const history = normalizeHistory(historyData).slice(-168);
-  if (!history.length) {
-    ctx.fillText("No history data found yet.", 20, 50);
-    return;
-  }
-
-  const values = history.map((item) => pointValue(item, type));
-  const max = Math.max(...values.map(Math.abs), 1);
-  const padding = 28;
-  const width = canvas.width - padding * 2;
-  const height = canvas.height - padding * 2;
-
-  ctx.beginPath();
-  ctx.moveTo(padding, padding);
-  ctx.lineTo(padding, canvas.height - padding);
-  ctx.lineTo(canvas.width - padding, canvas.height - padding);
-  ctx.stroke();
-
-  values.forEach((value, i) => {
-    const x = padding + (i / Math.max(values.length - 1, 1)) * width;
-    const y = canvas.height - padding - ((value + max) / (max * 2)) * height;
-
-    if (i === 0) ctx.beginPath(), ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+  const list = Array.isArray(raw) ? raw : Array.isArray(raw?.history) ? raw.history : [];
+  return list.map((item, index) => {
+    const rows = normalizeLatest(item);
+    const total = sumRows(rows);
+    return {
+      label: getHistoryLabel(item, index),
+      deposit: total.deposit,
+      withdrawal: total.withdrawal,
+      net: total.net
+    };
   });
-
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  ctx.fillText(`Latest: ${fmt(values[values.length - 1])}`, padding, 18);
 }
 
-async function loadData() {
-  try {
-    const [latestRes, historyRes] = await Promise.all([
-      fetch("data/latest.json?t=" + Date.now()),
-      fetch("data/history.json?t=" + Date.now())
-    ]);
+function getHistoryLabel(item, index) {
+  const rawDate = item.timestamp || item.updated_at || item.created_at || item.time || item.date;
+  if (!rawDate) return `Point ${index + 1}`;
 
-    latestData = await latestRes.json();
-    historyData = await historyRes.json();
+  const date = new Date(rawDate);
+  if (Number.isNaN(date.getTime())) return String(rawDate);
 
-    const map = buildBrandMap(latestData);
+  return date.toLocaleString("en-GB", {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
 
-    renderSummary(map);
-    renderTable(map);
-    renderAlerts(map);
-    renderTrend();
+function renderAlertPreview(total) {
+  const items = [];
 
-    const updated = getUpdatedTime(latestData);
-    $("lastUpdated").textContent = updated ? `Updated: ${updated}` : "Updated successfully";
-  } catch (err) {
-    console.error(err);
-    $("lastUpdated").textContent = "Data loading failed";
-    $("alerts").innerHTML = `<div class="alert">Could not load latest.json or history.json.</div>`;
+  if (total.pressure >= 0.9) {
+    items.push(`Overall withdrawal pressure is high at ${percent(total.pressure)}.`);
+  }
+
+  const highRiskBrands = state.rows.filter((r) => r.risk === "High");
+  if (highRiskBrands.length) {
+    items.push(`${highRiskBrands.length} brand(s) currently show high risk pressure.`);
+  }
+
+  const negativeNet = state.rows.filter((r) => r.net < 0).map((r) => r.brand);
+  if (negativeNet.length) {
+    items.push(`Negative net flow detected: ${negativeNet.join(", ")}.`);
+  }
+
+  if (!items.length) {
+    items.push("No critical alert based on current rule preview.");
+  }
+
+  $("alertPreview").innerHTML = items.map((text) => `<div class="alert-item">${text}</div>`).join("");
+}
+
+function chartOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: "#d9e2ff" } },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${money(ctx.raw)}`
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: "#aebbe7" }, grid: { color: "rgba(255,255,255,.06)" } },
+      y: { ticks: { color: "#aebbe7", callback: (v) => shortMoney(v) }, grid: { color: "rgba(255,255,255,.06)" } }
+    }
+  };
+}
+
+function destroyChart(key) {
+  if (state.charts[key]) {
+    state.charts[key].destroy();
+    state.charts[key] = null;
   }
 }
 
-$("refreshBtn").addEventListener("click", loadData);
-$("searchInput").addEventListener("input", () => renderTable(buildBrandMap(latestData)));
-$("trendType").addEventListener("change", renderTrend);
-window.addEventListener("resize", renderTrend);
+function getLastUpdatedText(raw) {
+  const value = raw?.timestamp || raw?.updated_at || raw?.last_updated || raw?.generated_at;
+  if (!value) return "Latest file loaded";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("en-GB", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
 
-loadData();
+function setText(id, value) {
+  const el = $(id);
+  if (el) el.textContent = value;
+}
+
+function money(value) {
+  const sign = value < 0 ? "-" : "";
+  const abs = Math.abs(value);
+  return `${sign}${abs.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+function shortMoney(value) {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return String(value);
+}
+
+function percent(value) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
+let toastTimer = null;
+function showToast(message) {
+  const toast = $("toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+}
