@@ -238,7 +238,7 @@
           <div>
             <p class="eyebrow">Live Hourly Analysis</p>
             <h3>Hourly Deposit / Withdrawal Trend</h3>
-            <p class="muted">Select a date and brands to review hourly amount, difference, and net flow.</p>
+            <p class="muted">Select a date and brands to review hourly brand-wise amount, difference, and net flow.</p>
           </div>
           <div class="hourly-controls">
             <div class="control-field">
@@ -270,25 +270,34 @@
         <div class="grid two-col hourly-chart-grid">
           <article class="mini-chart-card">
             <div class="mini-chart-title">
-              <span>Hourly Deposit vs Withdrawal</span>
-              <small id="hourlyChartSubtitle">Difference by selected brands</small>
+              <span>Selected Brands Hourly Total</span>
+              <small id="hourlyChartSubtitle">Difference total by selected brands</small>
             </div>
             <canvas id="hourlyTrendChart"></canvas>
           </article>
 
           <article class="mini-chart-card">
             <div class="mini-chart-title">
-              <span>Hourly Net Flow</span>
-              <small>Deposit - Withdrawal</small>
+              <span>Selected Brands Net Flow</span>
+              <small>Total deposit - total withdrawal</small>
             </div>
             <canvas id="hourlyNetChart"></canvas>
           </article>
         </div>
 
-        <div class="table-wrap hourly-table-wrap">
+        <div class="hourly-table-title">
+          <div>
+            <strong>Brand-wise Hourly Details</strong>
+            <small>Each selected brand is shown separately by hour.</small>
+          </div>
+        </div>
+
+        <div class="table-wrap hourly-table-wrap brand-wise-hourly-table">
           <table>
             <thead>
               <tr>
+                <th>Brand</th>
+                <th>Group</th>
                 <th>Time</th>
                 <th class="num">Deposit Amount</th>
                 <th class="num">Deposit Difference</th>
@@ -298,7 +307,7 @@
               </tr>
             </thead>
             <tbody id="hourlyTableBody">
-              <tr><td colspan="6" class="empty">Loading hourly data...</td></tr>
+              <tr><td colspan="8" class="empty">Loading hourly data...</td></tr>
             </tbody>
           </table>
         </div>
