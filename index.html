@@ -24,13 +24,14 @@
         <a href="#groups">MCW vs CX</a>
         <a href="#brands">All Brands</a>
         <a href="#trend">7-Day Trend</a>
+        <a href="#hourly">Hourly Trend</a>
       </nav>
 
       <div class="sidebar-note">
         <span class="pulse-dot"></span>
         <div>
           <strong>Auto Data</strong>
-          <small>Reading from <code>data/latest.json</code> and <code>data/history.json</code></small>
+          <small>Live data from Worker + history backup</small>
         </div>
       </div>
     </aside>
@@ -229,6 +230,78 @@
           </div>
         </div>
         <canvas id="trendChart"></canvas>
+      </section>
+
+
+      <section class="panel hourly-panel" id="hourly">
+        <div class="panel-head hourly-head">
+          <div>
+            <p class="eyebrow">Live Hourly Analysis</p>
+            <h3>Hourly Deposit / Withdrawal Trend</h3>
+            <p class="muted">Select a date and brands to review hourly amount, difference, and net flow.</p>
+          </div>
+          <div class="hourly-controls">
+            <div class="control-field">
+              <label for="hourlyDateFilter">Date</label>
+              <select id="hourlyDateFilter"></select>
+            </div>
+            <div class="control-field">
+              <label for="hourlyMetricFilter">Chart Metric</label>
+              <select id="hourlyMetricFilter">
+                <option value="difference">Difference</option>
+                <option value="amount">Amount</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="brand-picker-head">
+          <div>
+            <strong>Brand Filter</strong>
+            <small id="hourlySelectionSummary">All brands selected</small>
+          </div>
+          <div class="brand-picker-actions">
+            <button id="selectAllHourlyBrands" class="btn ghost" type="button">Select All</button>
+            <button id="clearHourlyBrands" class="btn ghost" type="button">Clear</button>
+          </div>
+        </div>
+        <div id="hourlyBrandPicker" class="brand-picker"></div>
+
+        <div class="grid two-col hourly-chart-grid">
+          <article class="mini-chart-card">
+            <div class="mini-chart-title">
+              <span>Hourly Deposit vs Withdrawal</span>
+              <small id="hourlyChartSubtitle">Difference by selected brands</small>
+            </div>
+            <canvas id="hourlyTrendChart"></canvas>
+          </article>
+
+          <article class="mini-chart-card">
+            <div class="mini-chart-title">
+              <span>Hourly Net Flow</span>
+              <small>Deposit - Withdrawal</small>
+            </div>
+            <canvas id="hourlyNetChart"></canvas>
+          </article>
+        </div>
+
+        <div class="table-wrap hourly-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th class="num">Deposit Amount</th>
+                <th class="num">Deposit Difference</th>
+                <th class="num">Withdrawal Amount</th>
+                <th class="num">Withdrawal Difference</th>
+                <th class="num">Net Flow</th>
+              </tr>
+            </thead>
+            <tbody id="hourlyTableBody">
+              <tr><td colspan="6" class="empty">Loading hourly data...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section class="panel alerts-panel">
