@@ -1,1 +1,312 @@
-[]
+[
+  {
+    "updated_at_utc": "2026-04-27T09:39:47.798788+00:00",
+    "source": {
+      "deposit_url": "https://stg-risk.mcwchat.com/admin/dashboard-summary-deposit",
+      "withdrawal_url": "https://stg-risk.mcwchat.com/admin/dashboard-summary-withdrawal"
+    },
+    "brands": {
+      "M1": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "B1": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "K1": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "M2": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "B2": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "B4": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "B3": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "TK": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "B5": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "JY": {
+        "group": "MCW",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "CX": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "MB": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "MP": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "JBG": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "DZP": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "SB": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "SLB": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "JWAY": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "BJD": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "KVP": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "HBJ": {
+        "group": "CX",
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      }
+    },
+    "group_totals": {
+      "MCW": {
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      },
+      "CX": {
+        "deposit_count": 0,
+        "deposit_amount": 0,
+        "deposit_difference": 0,
+        "withdrawal_count": 0,
+        "withdrawal_amount": 0,
+        "withdrawal_difference": 0,
+        "net_flow": 0,
+        "withdrawal_pressure": 0
+      }
+    },
+    "comparison": {
+      "m1_vs_cx": {
+        "M1": {
+          "group": "MCW",
+          "deposit_count": 0,
+          "deposit_amount": 0,
+          "deposit_difference": 0,
+          "withdrawal_count": 0,
+          "withdrawal_amount": 0,
+          "withdrawal_difference": 0,
+          "net_flow": 0,
+          "withdrawal_pressure": 0
+        },
+        "CX": {
+          "group": "CX",
+          "deposit_count": 0,
+          "deposit_amount": 0,
+          "deposit_difference": 0,
+          "withdrawal_count": 0,
+          "withdrawal_amount": 0,
+          "withdrawal_difference": 0,
+          "net_flow": 0,
+          "withdrawal_pressure": 0
+        }
+      },
+      "mcw_vs_cx_total": {
+        "MCW": {
+          "deposit_count": 0,
+          "deposit_amount": 0,
+          "deposit_difference": 0,
+          "withdrawal_count": 0,
+          "withdrawal_amount": 0,
+          "withdrawal_difference": 0,
+          "net_flow": 0,
+          "withdrawal_pressure": 0
+        },
+        "CX": {
+          "deposit_count": 0,
+          "deposit_amount": 0,
+          "deposit_difference": 0,
+          "withdrawal_count": 0,
+          "withdrawal_amount": 0,
+          "withdrawal_difference": 0,
+          "net_flow": 0,
+          "withdrawal_pressure": 0
+        }
+      }
+    }
+  }
+]
