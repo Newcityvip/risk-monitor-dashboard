@@ -2,7 +2,7 @@ const MCW_BRANDS = ["M1", "B1", "K1", "M2", "B2", "B4", "B3", "TK", "B5", "JY"];
 const CX_BRANDS = ["CX", "MB", "MP", "JBG", "DZP", "SB", "SLB", "JWAY", "BJD", "KVP", "HBJ"];
 const ALL_BRANDS = [...MCW_BRANDS, ...CX_BRANDS];
 
-const DATA_URL = "data/latest.json";
+const DATA_URL = "https://dp-wd-monitor.mdrobiulislam.workers.dev/";
 const HISTORY_URL = "data/history.json";
 
 let state = {
