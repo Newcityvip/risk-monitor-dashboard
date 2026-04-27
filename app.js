@@ -342,6 +342,7 @@ function renderTrendChart() {
   });
 }
 
+
 function renderHourlyControls() {
   if (!$("hourlyDateFilter") || !$("hourlyBrandPicker")) return;
 
@@ -425,6 +426,17 @@ function getHourlyDates() {
   return Array.from(dates).sort();
 }
 
+function hasHourlyValue(values) {
+  if (!values || typeof values !== "object") return false;
+  return toNumber(values.amount) !== 0 || toNumber(values.difference) !== 0 || toNumber(values.count) !== 0;
+}
+
+function compareHour(a, b) {
+  const [ah, am] = String(a).split(":").map(Number);
+  const [bh, bm] = String(b).split(":").map(Number);
+  return (ah || 0) - (bh || 0) || (am || 0) - (bm || 0);
+}
+
 function getHourlyHours(date) {
   const hours = new Set();
   const deposit = state.latest?.hourly?.deposit || {};
@@ -432,27 +444,35 @@ function getHourlyHours(date) {
 
   if (!date) return [];
 
-  for (const source of [deposit, withdrawal]) {
-    for (const brand of ALL_BRANDS) {
-      Object.keys(source?.[brand]?.[date] || {}).forEach((hour) => hours.add(hour));
-    }
+  for (const brand of ALL_BRANDS) {
+    const depHours = deposit?.[brand]?.[date] || {};
+    const wdHours = withdrawal?.[brand]?.[date] || {};
+
+    Object.keys(depHours).forEach((hour) => {
+      if (hasHourlyValue(depHours[hour]) || hasHourlyValue(wdHours[hour])) hours.add(hour);
+    });
+
+    Object.keys(wdHours).forEach((hour) => {
+      if (hasHourlyValue(wdHours[hour]) || hasHourlyValue(depHours[hour])) hours.add(hour);
+    });
   }
 
-  return Array.from(hours).sort((a, b) => a.localeCompare(b));
+  return Array.from(hours).sort(compareHour);
 }
 
 function renderHourlySection() {
   if (!$("hourlyTableBody")) return;
 
   const selectedDate = $("hourlyDateFilter")?.value || getHourlyDates().slice(-1)[0];
-  const selectedHour = $("hourlyHourFilter")?.value || getHourlyHours(selectedDate).slice(-1)[0];
+  const hours = getHourlyHours(selectedDate);
+  const selectedHour = $("hourlyHourFilter")?.value || (hours.length ? hours[hours.length - 1] : null);
   const selectedBrands = state.hourlySelectedBrands.length ? state.hourlySelectedBrands : [];
-  const metric = $("hourlyMetricFilter")?.value || "amount";
+  const metric = $("hourlyMetricFilter")?.value || "difference";
   const brandRows = buildExactHourBrandRows(selectedDate, selectedHour, selectedBrands);
 
   updateHourlySummary(selectedBrands, selectedDate, selectedHour, metric, brandRows);
   renderExactHourBrandTable(brandRows);
-  renderExactHourCharts(brandRows, metric, selectedDate, selectedHour);
+  renderExactHourCharts(brandRows, metric);
 }
 
 function buildExactHourBrandRows(date, hour, selectedBrands) {
@@ -545,27 +565,13 @@ function renderExactHourBrandTable(rows) {
   }).join("");
 }
 
-function renderExactHourCharts(rows, metric, selectedDate, selectedHour) {
-  renderExactMetricChart(
-    "hourlyDepositBrandChart",
-    rows,
-    metric === "difference" ? "Deposit Difference" : "Deposit Amount",
-    metric === "difference" ? rows.map((row) => row.depositDifference) : rows.map((row) => row.depositAmount)
-  );
+function renderExactHourCharts(rows, metric) {
+  const depositValues = metric === "difference" ? rows.map((row) => row.depositDifference) : rows.map((row) => row.depositAmount);
+  const withdrawalValues = metric === "difference" ? rows.map((row) => row.withdrawalDifference) : rows.map((row) => row.withdrawalAmount);
 
-  renderExactMetricChart(
-    "hourlyWithdrawalBrandChart",
-    rows,
-    metric === "difference" ? "Withdrawal Difference" : "Withdrawal Amount",
-    metric === "difference" ? rows.map((row) => row.withdrawalDifference) : rows.map((row) => row.withdrawalAmount)
-  );
-
-  renderExactMetricChart(
-    "hourlyNetBrandChart",
-    rows,
-    "Net Flow",
-    rows.map((row) => row.net)
-  );
+  renderExactMetricChart("hourlyDepositBrandChart", rows, metric === "difference" ? "Deposit Difference" : "Deposit Amount", depositValues);
+  renderExactMetricChart("hourlyWithdrawalBrandChart", rows, metric === "difference" ? "Withdrawal Difference" : "Withdrawal Amount", withdrawalValues);
+  renderExactMetricChart("hourlyNetBrandChart", rows, "Net Flow", rows.map((row) => row.net));
 }
 
 function renderExactMetricChart(chartId, rows, label, data) {
