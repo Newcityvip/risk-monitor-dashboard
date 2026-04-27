@@ -602,3 +602,157 @@ code {
     flex-direction: column;
   }
 }
+
+
+/* Hourly trend upgrade */
+.hourly-panel {
+  margin-bottom: 16px;
+}
+
+.hourly-head {
+  align-items: flex-start;
+}
+
+.hourly-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.control-field {
+  display: grid;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.control-field label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.control-field select,
+.hourly-controls select {
+  color: var(--text);
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.06);
+  border-radius: 14px;
+  padding: 11px 12px;
+  outline: none;
+}
+
+.brand-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+
+.brand-picker-head strong {
+  display: block;
+}
+
+.brand-picker-head small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.brand-picker-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn.ghost {
+  color: var(--text);
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+.brand-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.brand-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255,255,255,.04);
+  cursor: pointer;
+  user-select: none;
+}
+
+.brand-check input {
+  accent-color: #6ea8ff;
+}
+
+.brand-check.mcw {
+  background: rgba(110,168,255,.11);
+}
+
+.brand-check.cx {
+  background: rgba(49,208,170,.10);
+}
+
+.hourly-chart-grid {
+  margin-top: 10px;
+}
+
+.mini-chart-card {
+  min-height: 340px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255,255,255,.035);
+}
+
+.mini-chart-card canvas {
+  width: 100% !important;
+  height: 270px !important;
+}
+
+.mini-chart-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.mini-chart-title span {
+  font-weight: 900;
+}
+
+.mini-chart-title small {
+  color: var(--muted);
+}
+
+.hourly-table-wrap {
+  margin-top: 14px;
+}
+
+.hourly-table-wrap table {
+  min-width: 980px;
+}
+
+@media (max-width: 760px) {
+  .hourly-controls,
+  .brand-picker-head,
+  .mini-chart-title {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
