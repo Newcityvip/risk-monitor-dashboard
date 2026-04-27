@@ -401,14 +401,16 @@ function renderHourlySection() {
   if (!$("hourlyTableBody")) return;
 
   const selectedDate = $("hourlyDateFilter")?.value || getHourlyDates().slice(-1)[0];
-  const selectedBrands = state.hourlySelectedBrands.length ? state.hourlySelectedBrands : [];
+  const selectedBrands = state.hourlySelectedBrands.length ? state.hourlySelectedBrands : [...ALL_BRANDS];
   const metric = $("hourlyMetricFilter")?.value || "difference";
-  const hourlyRows = buildHourlyRows(selectedDate, selectedBrands);
+
+  const aggregateRows = buildHourlyRows(selectedDate, selectedBrands);
+  const brandRows = buildHourlyBrandRows(selectedDate, selectedBrands);
 
   updateHourlySummary(selectedBrands, selectedDate, metric);
-  renderHourlyTable(hourlyRows);
-  renderHourlyTrendChart(hourlyRows, metric);
-  renderHourlyNetChart(hourlyRows);
+  renderHourlyTable(brandRows);
+  renderHourlyTrendChart(aggregateRows, metric);
+  renderHourlyNetChart(aggregateRows);
 }
 
 function buildHourlyRows(date, selectedBrands) {
@@ -451,6 +453,52 @@ function buildHourlyRows(date, selectedBrands) {
   });
 }
 
+function buildHourlyBrandRows(date, selectedBrands) {
+  if (!date || !selectedBrands.length) return [];
+
+  const rows = [];
+  const hours = new Set();
+  const deposit = state.latest?.hourly?.deposit || {};
+  const withdrawal = state.latest?.hourly?.withdrawal || {};
+
+  for (const brand of selectedBrands) {
+    Object.keys(deposit?.[brand]?.[date] || {}).forEach((hour) => hours.add(hour));
+    Object.keys(withdrawal?.[brand]?.[date] || {}).forEach((hour) => hours.add(hour));
+  }
+
+  const sortedHours = Array.from(hours).sort();
+
+  for (const hour of sortedHours) {
+    for (const brand of selectedBrands) {
+      const dep = deposit?.[brand]?.[date]?.[hour] || {};
+      const wd = withdrawal?.[brand]?.[date]?.[hour] || {};
+
+      const depositAmount = toNumber(dep.amount);
+      const depositDifference = toNumber(dep.difference);
+      const withdrawalAmount = toNumber(wd.amount);
+      const withdrawalDifference = toNumber(wd.difference);
+
+      if (depositAmount === 0 && depositDifference === 0 && withdrawalAmount === 0 && withdrawalDifference === 0) {
+        continue;
+      }
+
+      rows.push({
+        brand,
+        group: MCW_BRANDS.includes(brand) ? "MCW" : "CX",
+        hour,
+        depositAmount,
+        depositDifference,
+        withdrawalAmount,
+        withdrawalDifference,
+        net: depositAmount - withdrawalAmount,
+        netDifference: depositDifference - withdrawalDifference
+      });
+    }
+  }
+
+  return rows;
+}
+
 function updateHourlySummary(selectedBrands, selectedDate, metric) {
   if ($("hourlySelectionSummary")) {
     const countText = selectedBrands.length === ALL_BRANDS.length
@@ -461,19 +509,21 @@ function updateHourlySummary(selectedBrands, selectedDate, metric) {
 
   if ($("hourlyChartSubtitle")) {
     $("hourlyChartSubtitle").textContent = metric === "amount"
-      ? "Amount by selected brands"
-      : "Difference by selected brands";
+      ? "Total amount by selected brands"
+      : "Total difference by selected brands";
   }
 }
 
 function renderHourlyTable(rows) {
   if (!rows.length) {
-    $("hourlyTableBody").innerHTML = `<tr><td colspan="6" class="empty">No hourly data for selected date / brands.</td></tr>`;
+    $("hourlyTableBody").innerHTML = `<tr><td colspan="8" class="empty">No hourly data for selected date / brands.</td></tr>`;
     return;
   }
 
   $("hourlyTableBody").innerHTML = rows.map((row) => `
     <tr>
+      <td><span class="hourly-brand-name">${row.brand}</span></td>
+      <td><span class="group-badge ${row.group.toLowerCase()}">${row.group}</span></td>
       <td><strong>${row.hour}</strong></td>
       <td class="num">${money(row.depositAmount)}</td>
       <td class="num ${row.depositDifference < 0 ? "neg" : "pos"}">${money(row.depositDifference)}</td>
@@ -495,12 +545,12 @@ function renderHourlyTrendChart(rows, metric) {
   const metricLabel = metric === "amount" ? "Amount" : "Difference";
 
   state.charts.hourlyTrendChart = new Chart(ctx, {
-    type: "line",
+    type: "bar",
     data: {
       labels,
       datasets: [
-        { label: `Deposit ${metricLabel}`, data: depositData, tension: 0.35 },
-        { label: `Withdrawal ${metricLabel}`, data: withdrawalData, tension: 0.35 }
+        { label: `Deposit ${metricLabel}`, data: depositData, borderWidth: 1 },
+        { label: `Withdrawal ${metricLabel}`, data: withdrawalData, borderWidth: 1 }
       ]
     },
     options: chartOptions()
@@ -516,7 +566,7 @@ function renderHourlyNetChart(rows) {
     type: "bar",
     data: {
       labels: rows.map((row) => row.hour),
-      datasets: [{ label: "Net Flow", data: rows.map((row) => row.net) }]
+      datasets: [{ label: "Net Flow", data: rows.map((row) => row.net), borderWidth: 1 }]
     },
     options: chartOptions()
   });
