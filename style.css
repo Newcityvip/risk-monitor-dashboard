@@ -756,3 +756,48 @@ code {
     align-items: stretch;
   }
 }
+
+
+/* Brand-wise hourly table upgrade */
+.hourly-table-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0 10px;
+}
+
+.hourly-table-title strong {
+  display: block;
+  font-size: 16px;
+}
+
+.hourly-table-title small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.brand-wise-hourly-table table {
+  min-width: 1220px;
+}
+
+.brand-wise-hourly-table tbody tr:hover {
+  background: rgba(255,255,255,.035);
+}
+
+.hourly-brand-name {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  background: rgba(255,255,255,.07);
+}
+
+.hourly-total-note {
+  color: var(--muted);
+  font-size: 12px;
+}
