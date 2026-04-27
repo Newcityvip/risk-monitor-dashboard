@@ -251,8 +251,8 @@
             <div class="control-field">
               <label for="hourlyMetricFilter">Chart Metric</label>
               <select id="hourlyMetricFilter">
-                <option value="difference">Difference</option>
                 <option value="amount">Amount</option>
+                <option value="difference">Difference</option>
               </select>
             </div>
           </div>
@@ -260,7 +260,7 @@
 
         <div class="hourly-source-note">
           <strong id="hourlyExactLabel">Showing exact source hour</strong>
-          <span>Times are read directly from deposit and withdrawal source data.</span>
+          <span>Times are read directly from source data. Empty future hours are excluded automatically.</span>
         </div>
 
         <div class="status-strip hourly-exact-summary">
