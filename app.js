@@ -215,7 +215,7 @@ function formatPressureGap(mcwPressure, cxPressure) {
   const points = Math.abs(gap * 100).toFixed(1);
   if (gap > 0) return `MCW Higher Withdrawal Pressure +${points}%`;
 if (gap < 0) return `CX Higher Withdrawal Pressure +${points}%`;
-  return "Equal";
+  return "Balanced Pressure";
 }
 
 function renderDirectComparison(m1, cxBrand) {
