@@ -20,6 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("refreshBtn").addEventListener("click", loadDashboard);
   $("brandSearch").addEventListener("input", renderTable);
   $("groupFilter").addEventListener("change", renderTable);
+  if ($("historyTrendFilter")) {
+  $("historyTrendFilter").addEventListener("change", renderTrendChart);
+}
 
   if ($("hourlyDateFilter")) $("hourlyDateFilter").addEventListener("change", renderHourlySection);
   if ($("hourlyMetricFilter")) $("hourlyMetricFilter").addEventListener("change", renderHourlySection);
@@ -534,8 +537,17 @@ function renderBrandNetChart() {
 function renderTrendChart() {
   const ctx = $("trendChart");
   destroyChart("trendChart");
+  const filter = $("historyTrendFilter")?.value || "all";
 
-  const points = state.history.slice(-168);
+  let points = state.history.slice(-168);
+
+if (filter !== "all") {
+  points = points.map(p => ({
+    ...p,
+    deposit: p.groups?.[filter]?.deposit ?? 0,
+    withdrawal: p.groups?.[filter]?.withdrawal ?? 0
+  }));
+}
   const labels = points.map((p) => p.label);
   const deposits = points.map((p) => p.deposit);
   const withdrawals = points.map((p) => p.withdrawal);
@@ -742,12 +754,27 @@ function normalizeHistory(raw) {
   return list.map((item, index) => {
     const rows = normalizeLatest(item);
     const total = sumRows(rows);
-    return {
-      label: getHistoryLabel(item, index),
-      deposit: total.deposit,
-      withdrawal: total.withdrawal,
-      net: total.net
-    };
+   const mcw = sumRows(rows.filter((r) => r.group === "MCW"));
+const cx = sumRows(rows.filter((r) => r.group === "CX"));
+
+return {
+  label: getHistoryLabel(item, index),
+  deposit: total.deposit,
+  withdrawal: total.withdrawal,
+  net: total.net,
+  groups: {
+    MCW: {
+      deposit: mcw.deposit,
+      withdrawal: mcw.withdrawal,
+      net: mcw.net
+    },
+    CX: {
+      deposit: cx.deposit,
+      withdrawal: cx.withdrawal,
+      net: cx.net
+    }
+  }
+};
   });
 }
 
