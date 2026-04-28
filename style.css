@@ -756,3 +756,17 @@ code {
     align-items: stretch;
   }
 }
+/* Fix dropdown readability */
+.control-field select,
+.hourly-controls select,
+.table-controls select {
+  background-color: #1f293b;
+  color: #ffffff;
+}
+
+.control-field select option,
+.hourly-controls select option,
+.table-controls select option {
+  background-color: #1f293b;
+  color: #ffffff;
+}
