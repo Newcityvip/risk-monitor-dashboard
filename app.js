@@ -213,8 +213,8 @@ function formatNetGap(mcwNet, cxNet) {
 function formatPressureGap(mcwPressure, cxPressure) {
   const gap = toNumber(mcwPressure) - toNumber(cxPressure);
   const points = Math.abs(gap * 100).toFixed(1);
-  if (gap > 0) return `MCW +${points}pp`;
-  if (gap < 0) return `CX +${points}pp`;
+  if (gap > 0) return `MCW Higher Withdrawal Pressure +${points}%`;
+if (gap < 0) return `CX Higher Withdrawal Pressure +${points}%`;
   return "Equal";
 }
 
