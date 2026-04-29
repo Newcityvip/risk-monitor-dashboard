@@ -18,6 +18,7 @@ const $ = (id) => document.getElementById(id);
 
 document.addEventListener("DOMContentLoaded", () => {
   $("refreshBtn").addEventListener("click", loadDashboard);
+  if ($("downloadReportBtn")) $("downloadReportBtn").addEventListener("click", downloadDailyReport);
   $("brandSearch").addEventListener("input", renderTable);
   $("groupFilter").addEventListener("change", renderTable);
   if ($("historyTrendFilter")) {
@@ -46,6 +47,7 @@ async function loadDashboard() {
 
     state.latest = latestResult.value;
     state.rawHistory = historyResult.status === "fulfilled" ? normalizeRawHistory(historyResult.value) : [];
+    populateReportDates();
     state.history = normalizeHistory(state.rawHistory);
     state.rows = normalizeLatest(state.latest);
 
@@ -924,4 +926,324 @@ function showToast(message) {
   toast.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+}
+function downloadDailyReport() {
+  if (typeof XLSX === "undefined") {
+    alert("Excel library is still loading. Please try again in a moment.");
+    return;
+  }
+
+  if (!state.rows || state.rows.length === 0) {
+    alert("No data available");
+    return;
+  }
+
+  const selectedDate = $("reportDateFilter")?.value || getLatestReportDate();
+  const report = getReportDataForDate(selectedDate);
+  const workbook = XLSX.utils.book_new();
+
+  appendJsonSheet(workbook, "Executive Summary", buildExecutiveSummaryRows(report));
+  appendJsonSheet(workbook, "Brand Summary", buildBrandSummaryRows(report.rows, report.date));
+  appendJsonSheet(workbook, "Group Hourly Summary", buildGroupHourlySummaryRows(report.hourlyRows));
+  appendJsonSheet(workbook, "Hourly Brand Details", report.hourlyRows);
+  appendJsonSheet(workbook, "Hourly Heatmap", buildHourlyHeatmapRows(report.hourlyRows, report.hours));
+
+  XLSX.writeFile(workbook, `risk-report-${report.date || new Date().toISOString().slice(0, 10)}.xlsx`);
+  showToast("Excel report downloaded");
+}
+
+function populateReportDates() {
+  const select = $("reportDateFilter");
+  if (!select) return;
+
+  const currentValue = select.value;
+  const dates = new Set();
+  const latestDate = getLatestReportDate();
+
+  if (latestDate) dates.add(latestDate);
+  (state.rawHistory || []).forEach((item) => {
+    const date = getReportDateValue(item);
+    if (date) dates.add(date);
+  });
+
+  const sortedDates = Array.from(dates).sort().reverse();
+  select.innerHTML = sortedDates.map((date) => `<option value="${date}">${date}</option>`).join("");
+
+  if (sortedDates.includes(currentValue)) {
+    select.value = currentValue;
+  } else if (latestDate && sortedDates.includes(latestDate)) {
+    select.value = latestDate;
+  } else if (sortedDates.length) {
+    select.value = sortedDates[0];
+  }
+}
+
+function getLatestReportDate() {
+  return getReportDateValue(state.latest) || getHourlyDates().slice(-1)[0] || new Date().toISOString().slice(0, 10);
+}
+
+function getReportDateValue(item) {
+  if (!item) return "";
+  const raw =
+    item.date ||
+    item.updated_at_utc ||
+    item.timestamp ||
+    item.updated_at ||
+    item.created_at ||
+    item.time ||
+    item.last_updated ||
+    item.generated_at;
+
+  if (!raw) return "";
+  return String(raw).slice(0, 10);
+}
+
+function getReportDataForDate(selectedDate) {
+  const latestDate = getLatestReportDate();
+  let raw = state.latest;
+  let rows = state.rows;
+  let source = "Live dashboard data";
+
+  if (selectedDate && selectedDate !== latestDate) {
+    const daySnapshots = (state.rawHistory || [])
+      .filter((item) => getReportDateValue(item) === selectedDate)
+      .sort((a, b) => {
+        const ta = getSnapshotTime(a) || 0;
+        const tb = getSnapshotTime(b) || 0;
+        return ta - tb;
+      });
+
+    raw = daySnapshots[daySnapshots.length - 1] || null;
+    rows = raw ? normalizeLatest(raw) : ALL_BRANDS.map((brand) => buildBrandRow(brand, 0, 0));
+    source = raw ? "Latest available history snapshot" : "No snapshot found - zero-filled report";
+  }
+
+  const hours = getReportHours(raw, selectedDate);
+  const hourlyRows = buildHourlyBrandDetailRows(raw, selectedDate, hours);
+  return { date: selectedDate || latestDate, rows, raw, source, hours, hourlyRows };
+}
+
+function buildExecutiveSummaryRows(report) {
+  const total = sumRows(report.rows);
+  const mcw = sumRows(report.rows.filter((row) => row.group === "MCW"));
+  const cx = sumRows(report.rows.filter((row) => row.group === "CX"));
+  const pressureLeader = mcw.pressure > cx.pressure ? "MCW" : cx.pressure > mcw.pressure ? "CX" : "Balanced";
+  const highRiskBrands = report.rows.filter((row) => row.risk === "High");
+
+  return [
+    { Metric: "Report Date", Value: report.date },
+    { Metric: "Data Source", Value: report.source },
+    { Metric: "Snapshot Updated", Value: getLastUpdatedText(report.raw) },
+    { Metric: "Total Deposit", Value: total.deposit },
+    { Metric: "Total Withdrawal", Value: total.withdrawal },
+    { Metric: "Total Net Flow", Value: total.net },
+    { Metric: "Total Withdrawal Pressure %", Value: toPercentNumber(total.pressure) },
+    { Metric: "MCW Deposit", Value: mcw.deposit },
+    { Metric: "MCW Withdrawal", Value: mcw.withdrawal },
+    { Metric: "MCW Net Flow", Value: mcw.net },
+    { Metric: "MCW Withdrawal Pressure %", Value: toPercentNumber(mcw.pressure) },
+    { Metric: "CX Deposit", Value: cx.deposit },
+    { Metric: "CX Withdrawal", Value: cx.withdrawal },
+    { Metric: "CX Net Flow", Value: cx.net },
+    { Metric: "CX Withdrawal Pressure %", Value: toPercentNumber(cx.pressure) },
+    { Metric: "Net Gap", Value: formatNetGap(mcw.net, cx.net) },
+    { Metric: "Pressure Leader", Value: pressureLeader },
+    { Metric: "High Risk Brand Count", Value: highRiskBrands.length },
+    { Metric: "High Risk Brands", Value: highRiskBrands.map((row) => row.brand).join(", ") || "None" }
+  ];
+}
+
+function buildBrandSummaryRows(rows, date) {
+  return rows.map((row) => ({
+    Date: date,
+    Group: row.group,
+    Brand: row.brand,
+    "Deposit Amount": row.deposit,
+    "Deposit Difference": row.depositDiff,
+    "Withdrawal Amount": row.withdrawal,
+    "Withdrawal Difference": row.withdrawalDiff,
+    "Net Flow": row.net,
+    "Pressure %": toPercentNumber(row.pressure),
+    "Risk Status": row.risk
+  }));
+}
+
+function buildGroupHourlySummaryRows(hourlyRows) {
+  const buckets = new Map();
+
+  hourlyRows.forEach((row) => {
+    const key = `${row.Date}|${row.Hour}|${row.Group}`;
+    if (!buckets.has(key)) {
+      buckets.set(key, {
+        Date: row.Date,
+        Hour: row.Hour,
+        Group: row.Group,
+        "Deposit Count": 0,
+        "Deposit Amount": 0,
+        "Deposit Difference": 0,
+        "Withdrawal Count": 0,
+        "Withdrawal Amount": 0,
+        "Withdrawal Difference": 0
+      });
+    }
+
+    const bucket = buckets.get(key);
+    bucket["Deposit Count"] += toNumber(row["Deposit Count"]);
+    bucket["Deposit Amount"] += toNumber(row["Deposit Amount"]);
+    bucket["Deposit Difference"] += toNumber(row["Deposit Difference"]);
+    bucket["Withdrawal Count"] += toNumber(row["Withdrawal Count"]);
+    bucket["Withdrawal Amount"] += toNumber(row["Withdrawal Amount"]);
+    bucket["Withdrawal Difference"] += toNumber(row["Withdrawal Difference"]);
+  });
+
+  return Array.from(buckets.values()).map((row) => {
+    const net = row["Deposit Amount"] - row["Withdrawal Amount"];
+    const pressure = row["Deposit Amount"] > 0 ? row["Withdrawal Amount"] / row["Deposit Amount"] : row["Withdrawal Amount"] > 0 ? 9.99 : 0;
+    return {
+      ...row,
+      "Net Flow": net,
+      "Pressure %": toPercentNumber(pressure),
+      "Risk Status": getRiskLevel(pressure, net)
+    };
+  });
+}
+
+function buildHourlyHeatmapRows(hourlyRows, hours) {
+  return ALL_BRANDS.map((brand) => {
+    const group = MCW_BRANDS.includes(brand) ? "MCW" : "CX";
+    const row = { Brand: brand, Group: group };
+
+    hours.forEach((hour) => {
+      const item = hourlyRows.find((detail) => detail.Brand === brand && detail.Hour === hour);
+      row[hour] = item ? item["Pressure %"] : 0;
+    });
+
+    return row;
+  });
+}
+
+function buildHourlyBrandDetailRows(raw, date, hours) {
+  return ALL_BRANDS.flatMap((brand) => {
+    const group = MCW_BRANDS.includes(brand) ? "MCW" : "CX";
+
+    return hours.map((hour) => {
+      const deposit = getHourlyPoint(raw, "deposit", brand, date, hour);
+      const withdrawal = getHourlyPoint(raw, "withdrawal", brand, date, hour);
+      const depositAmount = getPointNumber(deposit, ["amount", "deposit_amount", "Deposit Amount"]);
+      const withdrawalAmount = getPointNumber(withdrawal, ["amount", "withdrawal_amount", "Withdrawal Amount"]);
+      const depositDifference = getPointNumber(deposit, ["difference", "deposit_difference", "Deposit Difference"]);
+      const withdrawalDifference = getPointNumber(withdrawal, ["difference", "withdrawal_difference", "Withdrawal Difference"]);
+      const net = depositAmount - withdrawalAmount;
+      const pressure = depositAmount > 0 ? withdrawalAmount / depositAmount : withdrawalAmount > 0 ? 9.99 : 0;
+
+      return {
+        Date: date,
+        Hour: hour,
+        Group: group,
+        Brand: brand,
+        "Deposit Count": getPointNumber(deposit, ["count", "deposit_count", "Deposit Count"]),
+        "Deposit Amount": depositAmount,
+        "Deposit Difference": depositDifference,
+        "Withdrawal Count": getPointNumber(withdrawal, ["count", "withdrawal_count", "Withdrawal Count"]),
+        "Withdrawal Amount": withdrawalAmount,
+        "Withdrawal Difference": withdrawalDifference,
+        "Net Flow": net,
+        "Pressure %": toPercentNumber(pressure),
+        "Risk Status": getRiskLevel(pressure, net)
+      };
+    });
+  });
+}
+
+function getReportHours(raw, date) {
+  const hours = new Set();
+
+  ["deposit", "withdrawal"].forEach((type) => {
+    const root = getHourlyRoot(raw, type);
+    ALL_BRANDS.forEach((brand) => {
+      const brandNode = getCaseInsensitiveValue(root, brand);
+      const dateNode = getCaseInsensitiveValue(brandNode, date) || brandNode;
+      if (dateNode && typeof dateNode === "object") {
+        Object.keys(dateNode).forEach((hour) => {
+          if (dateNode[hour] && typeof dateNode[hour] === "object") hours.add(hour);
+        });
+      }
+    });
+  });
+
+  return (hours.size ? Array.from(hours) : Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`))
+    .sort((a, b) => normalizeHourSortValue(a) - normalizeHourSortValue(b) || String(a).localeCompare(String(b)));
+}
+
+function getHourlyRoot(raw, type) {
+  if (!raw || typeof raw !== "object") return {};
+  const hourly = raw.hourly || {};
+
+  if (type === "deposit") {
+    return hourly.deposit || hourly.deposits || raw.hourly_deposit || raw.deposit_hourly || {};
+  }
+
+  return hourly.withdrawal || hourly.withdrawals || raw.hourly_withdrawal || raw.withdrawal_hourly || {};
+}
+
+function getHourlyPoint(raw, type, brand, date, hour) {
+  const root = getHourlyRoot(raw, type);
+  const brandNode = getCaseInsensitiveValue(root, brand);
+  const dateNode = getCaseInsensitiveValue(brandNode, date) || brandNode;
+
+  for (const candidate of getHourCandidates(hour)) {
+    const point = getCaseInsensitiveValue(dateNode, candidate);
+    if (point !== undefined) return point;
+  }
+
+  return {};
+}
+
+function getCaseInsensitiveValue(obj, key) {
+  if (!obj || typeof obj !== "object" || key === undefined || key === null) return undefined;
+  if (obj[key] !== undefined) return obj[key];
+
+  const foundKey = Object.keys(obj).find((itemKey) => String(itemKey).toLowerCase() === String(key).toLowerCase());
+  return foundKey !== undefined ? obj[foundKey] : undefined;
+}
+
+function getHourCandidates(hour) {
+  const raw = String(hour);
+  const noSuffix = raw.replace(/:00$/, "");
+  const padded = noSuffix.padStart(2, "0");
+  return Array.from(new Set([raw, noSuffix, padded, `${padded}:00`, `${Number(noSuffix)}`]));
+}
+
+function getPointNumber(point, keys) {
+  if (typeof point === "number" || typeof point === "string") return toNumber(point);
+  if (!point || typeof point !== "object") return 0;
+  return extractNumber(point, keys);
+}
+
+function normalizeHourSortValue(hour) {
+  const match = String(hour).match(/\d+/);
+  return match ? Number(match[0]) : 999;
+}
+
+function toPercentNumber(value) {
+  return Number((toNumber(value) * 100).toFixed(2));
+}
+
+function appendJsonSheet(workbook, sheetName, rows) {
+  const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{}]);
+  sheet["!cols"] = getColumnWidths(rows);
+  XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
+}
+
+function getColumnWidths(rows) {
+  const headers = rows.length ? Object.keys(rows[0]) : [];
+  return headers.map((header) => ({
+    wch: Math.min(
+      28,
+      Math.max(
+        String(header).length + 2,
+        ...rows.map((row) => String(row[header] ?? "").length + 2)
+      )
+    )
+  }));
 }
