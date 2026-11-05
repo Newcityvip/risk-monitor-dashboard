@@ -1,0 +1,53 @@
+{
+  "M1": {
+    "2026-11-05": {
+      "23:59": {
+        "withdrawal_count": "1,000",
+        "withdrawal_amount": "100,000.50",
+        "withdrawal_difference": "10.25"
+      }
+    }
+  },
+  "EXTRA": {
+    "2026-11-05": {
+      "23:59": {
+        "withdrawal_count": 88,
+        "withdrawal_amount": 8888,
+        "withdrawal_difference": 888
+      }
+    }
+  },
+  "FW": {
+    "2026-11-05": {
+      "16:00": {
+        "withdrawal_count": "315",
+        "withdrawal_amount": "61,600.01",
+        "withdrawal_difference": "2.25"
+      },
+      "23:59": {
+        "withdrawal_count": "350",
+        "withdrawal_amount": "65,432.19",
+        "withdrawal_difference": "15.67"
+      },
+      "01:00": {
+        "withdrawal_count": "300",
+        "withdrawal_amount": "60,000.12",
+        "withdrawal_difference": "-3.14"
+      },
+      "17:00": {
+        "withdrawal_count": "317",
+        "withdrawal_amount": "61,700.02",
+        "withdrawal_difference": "3.25"
+      }
+    }
+  },
+  "CX": {
+    "2026-11-05": {
+      "23:59": {
+        "withdrawal_count": "900",
+        "withdrawal_amount": "90,000.10",
+        "withdrawal_difference": "9.50"
+      }
+    }
+  }
+}
