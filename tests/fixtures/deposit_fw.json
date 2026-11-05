@@ -1,0 +1,53 @@
+{
+  "EXTRA": {
+    "2026-11-05": {
+      "23:59": {
+        "deposit_count": 99,
+        "deposit_amount": 9999,
+        "deposit_difference": 999
+      }
+    }
+  },
+  "FW": {
+    "2026-11-05": {
+      "17:00": {
+        "deposit_count": "1,217",
+        "deposit_amount": "123,400.10",
+        "deposit_difference": "12.34"
+      },
+      "01:00": {
+        "deposit_count": "1,234",
+        "deposit_amount": "123,456.78",
+        "deposit_difference": "-12.34"
+      },
+      "23:59": {
+        "deposit_count": "1,250",
+        "deposit_amount": "125,678.91",
+        "deposit_difference": "45.67"
+      },
+      "16:00": {
+        "deposit_count": "1,216",
+        "deposit_amount": "121,600.05",
+        "deposit_difference": "5.25"
+      }
+    }
+  },
+  "CX": {
+    "2026-11-05": {
+      "23:59": {
+        "deposit_count": "2,000",
+        "deposit_amount": "200,000.25",
+        "deposit_difference": "20.50"
+      }
+    }
+  },
+  "M1": {
+    "2026-11-05": {
+      "23:59": {
+        "deposit_count": "3,000",
+        "deposit_amount": "300,000.75",
+        "deposit_difference": "30.25"
+      }
+    }
+  }
+}
